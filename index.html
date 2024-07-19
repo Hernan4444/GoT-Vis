@@ -1,0 +1,628 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 600px;
+                 height: 400px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="frod">frod</option>
+                                
+                                    <option value="sams">sams</option>
+                                
+                                    <option value="ganda">ganda</option>
+                                
+                                    <option value="arag">arag</option>
+                                
+                                    <option value="goll">goll</option>
+                                
+                                    <option value="bilb">bilb</option>
+                                
+                                    <option value="pipp">pipp</option>
+                                
+                                    <option value="ring">ring</option>
+                                
+                                    <option value="shir">shir</option>
+                                
+                                    <option value="merr">merr</option>
+                                
+                                    <option value="boro">boro</option>
+                                
+                                    <option value="fara">fara</option>
+                                
+                                    <option value="mord">mord</option>
+                                
+                                    <option value="elve">elve</option>
+                                
+                                    <option value="rive">rive</option>
+                                
+                                    <option value="bage">bage</option>
+                                
+                                    <option value="elro">elro</option>
+                                
+                                    <option value="comp">comp</option>
+                                
+                                    <option value="gimli">gimli</option>
+                                
+                                    <option value="orcs">orcs</option>
+                                
+                                    <option value="saru">saru</option>
+                                
+                                    <option value="theod">theod</option>
+                                
+                                    <option value="gond">gond</option>
+                                
+                                    <option value="isen">isen</option>
+                                
+                                    <option value="lego">lego</option>
+                                
+                                    <option value="sfax">sfax</option>
+                                
+                                    <option value="dene">dene</option>
+                                
+                                    <option value="saur">saur</option>
+                                
+                                    <option value="roha">roha</option>
+                                
+                                    <option value="mori">mori</option>
+                                
+                                    <option value="treeb">treeb</option>
+                                
+                                    <option value="orth">orth</option>
+                                
+                                    <option value="eome">eome</option>
+                                
+                                    <option value="tiri">tiri</option>
+                                
+                                    <option value="hobb">hobb</option>
+                                
+                                    <option value="bree">bree</option>
+                                
+                                    <option value="andu">andu</option>
+                                
+                                    <option value="ents">ents</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "orange", "id": "frod", "label": "frod", "shape": "dot", "size": 10, "title": "Me llamo frod"}, {"color": "orange", "id": "sams", "label": "sams", "shape": "dot", "size": 10, "title": "Me llamo sams"}, {"color": "orange", "id": "ganda", "label": "ganda", "shape": "dot", "size": 10, "title": "Me llamo ganda"}, {"color": "orange", "id": "arag", "label": "arag", "shape": "dot", "size": 10, "title": "Me llamo arag"}, {"color": "orange", "id": "goll", "label": "goll", "shape": "dot", "size": 10, "title": "Me llamo goll"}, {"color": "orange", "id": "bilb", "label": "bilb", "shape": "dot", "size": 10, "title": "Me llamo bilb"}, {"color": "orange", "id": "pipp", "label": "pipp", "shape": "dot", "size": 10, "title": "Me llamo pipp"}, {"color": "orange", "id": "ring", "label": "ring", "shape": "dot", "size": 10, "title": "Me llamo ring"}, {"color": "orange", "id": "shir", "label": "shir", "shape": "dot", "size": 10, "title": "Me llamo shir"}, {"color": "orange", "id": "merr", "label": "merr", "shape": "dot", "size": 10, "title": "Me llamo merr"}, {"color": "orange", "id": "boro", "label": "boro", "shape": "dot", "size": 10, "title": "Me llamo boro"}, {"color": "orange", "id": "fara", "label": "fara", "shape": "dot", "size": 10, "title": "Me llamo fara"}, {"color": "orange", "id": "mord", "label": "mord", "shape": "dot", "size": 10, "title": "Me llamo mord"}, {"color": "orange", "id": "elve", "label": "elve", "shape": "dot", "size": 10, "title": "Me llamo elve"}, {"color": "orange", "id": "rive", "label": "rive", "shape": "dot", "size": 10, "title": "Me llamo rive"}, {"color": "orange", "id": "bage", "label": "bage", "shape": "dot", "size": 10, "title": "Me llamo bage"}, {"color": "orange", "id": "elro", "label": "elro", "shape": "dot", "size": 10, "title": "Me llamo elro"}, {"color": "orange", "id": "comp", "label": "comp", "shape": "dot", "size": 10, "title": "Me llamo comp"}, {"color": "orange", "id": "gimli", "label": "gimli", "shape": "dot", "size": 10, "title": "Me llamo gimli"}, {"color": "orange", "id": "orcs", "label": "orcs", "shape": "dot", "size": 10, "title": "Me llamo orcs"}, {"color": "orange", "id": "saru", "label": "saru", "shape": "dot", "size": 10, "title": "Me llamo saru"}, {"color": "orange", "id": "theod", "label": "theod", "shape": "dot", "size": 10, "title": "Me llamo theod"}, {"color": "orange", "id": "gond", "label": "gond", "shape": "dot", "size": 10, "title": "Me llamo gond"}, {"color": "orange", "id": "isen", "label": "isen", "shape": "dot", "size": 10, "title": "Me llamo isen"}, {"color": "orange", "id": "lego", "label": "lego", "shape": "dot", "size": 10, "title": "Me llamo lego"}, {"color": "orange", "id": "sfax", "label": "sfax", "shape": "dot", "size": 10, "title": "Me llamo sfax"}, {"color": "orange", "id": "dene", "label": "dene", "shape": "dot", "size": 10, "title": "Me llamo dene"}, {"color": "orange", "id": "saur", "label": "saur", "shape": "dot", "size": 10, "title": "Me llamo saur"}, {"color": "orange", "id": "roha", "label": "roha", "shape": "dot", "size": 10, "title": "Me llamo roha"}, {"color": "orange", "id": "mori", "label": "mori", "shape": "dot", "size": 10, "title": "Me llamo mori"}, {"color": "orange", "id": "treeb", "label": "treeb", "shape": "dot", "size": 10, "title": "Me llamo treeb"}, {"color": "orange", "id": "orth", "label": "orth", "shape": "dot", "size": 10, "title": "Me llamo orth"}, {"color": "orange", "id": "eome", "label": "eome", "shape": "dot", "size": 10, "title": "Me llamo eome"}, {"color": "orange", "id": "tiri", "label": "tiri", "shape": "dot", "size": 10, "title": "Me llamo tiri"}, {"color": "orange", "id": "hobb", "label": "hobb", "shape": "dot", "size": 10, "title": "Me llamo hobb"}, {"color": "orange", "id": "bree", "label": "bree", "shape": "dot", "size": 10, "title": "Me llamo bree"}, {"color": "orange", "id": "andu", "label": "andu", "shape": "dot", "size": 10, "title": "Me llamo andu"}, {"color": "orange", "id": "ents", "label": "ents", "shape": "dot", "size": 10, "title": "Me llamo ents"}]);
+                  edges = new vis.DataSet([{"from": "frod", "to": "sams", "width": 20.0}, {"from": "frod", "to": "ganda", "width": 6.677290836653387}, {"from": "frod", "to": "arag", "width": 5.352589641434263}, {"from": "frod", "to": "goll", "width": 4.633466135458168}, {"from": "frod", "to": "bilb", "width": 4.595617529880478}, {"from": "frod", "to": "pipp", "width": 4.179282868525896}, {"from": "frod", "to": "ring", "width": 3.99003984063745}, {"from": "frod", "to": "shir", "width": 3.762948207171315}, {"from": "frod", "to": "merr", "width": 3.0816733067729083}, {"from": "frod", "to": "boro", "width": 2.400398406374502}, {"from": "frod", "to": "fara", "width": 1.908366533864542}, {"from": "frod", "to": "mord", "width": 1.643426294820717}, {"from": "frod", "to": "elve", "width": 1.5298804780876494}, {"from": "frod", "to": "rive", "width": 1.5298804780876494}, {"from": "frod", "to": "bage", "width": 1.3784860557768925}, {"from": "frod", "to": "elro", "width": 1.302788844621514}, {"from": "frod", "to": "comp", "width": 1.1135458167330676}, {"from": "frod", "to": "gimli", "width": 1.1135458167330676}, {"from": "frod", "to": "orcs", "width": 1.1135458167330676}, {"from": "sams", "to": "goll", "width": 4.292828685258964}, {"from": "sams", "to": "pipp", "width": 3.649402390438247}, {"from": "sams", "to": "arag", "width": 2.665338645418327}, {"from": "sams", "to": "merr", "width": 2.2111553784860556}, {"from": "sams", "to": "ganda", "width": 1.7569721115537849}, {"from": "sams", "to": "shir", "width": 1.7191235059760956}, {"from": "sams", "to": "ring", "width": 1.5677290836653386}, {"from": "sams", "to": "elve", "width": 1.454183266932271}, {"from": "sams", "to": "bilb", "width": 1.1892430278884463}, {"from": "sams", "to": "mord", "width": 1.1135458167330676}, {"from": "ganda", "to": "pipp", "width": 4.5199203187251}, {"from": "ganda", "to": "arag", "width": 4.482071713147411}, {"from": "ganda", "to": "saru", "width": 2.551792828685259}, {"from": "ganda", "to": "ring", "width": 2.362549800796813}, {"from": "ganda", "to": "theod", "width": 1.9840637450199203}, {"from": "ganda", "to": "bilb", "width": 1.8705179282868527}, {"from": "ganda", "to": "gimli", "width": 1.8705179282868527}, {"from": "ganda", "to": "shir", "width": 1.6812749003984064}, {"from": "ganda", "to": "gond", "width": 1.5298804780876494}, {"from": "ganda", "to": "isen", "width": 1.5298804780876494}, {"from": "ganda", "to": "lego", "width": 1.5298804780876494}, {"from": "ganda", "to": "elro", "width": 1.4920318725099602}, {"from": "ganda", "to": "sfax", "width": 1.4163346613545817}, {"from": "ganda", "to": "merr", "width": 1.3784860557768925}, {"from": "ganda", "to": "dene", "width": 1.3406374501992033}, {"from": "ganda", "to": "saur", "width": 1.302788844621514}, {"from": "ganda", "to": "mord", "width": 1.2270916334661355}, {"from": "ganda", "to": "roha", "width": 1.2270916334661355}, {"from": "ganda", "to": "fara", "width": 1.1892430278884463}, {"from": "ganda", "to": "mori", "width": 1.1892430278884463}, {"from": "ganda", "to": "treeb", "width": 1.1135458167330676}, {"from": "ganda", "to": "boro", "width": 1.0756972111553784}, {"from": "ganda", "to": "orth", "width": 1.0756972111553784}, {"from": "merr", "to": "pipp", "width": 5.95816733067729}, {"from": "merr", "to": "arag", "width": 2.286852589641434}, {"from": "merr", "to": "shir", "width": 1.1135458167330676}, {"from": "pipp", "to": "arag", "width": 2.2490039840637452}, {"from": "pipp", "to": "shir", "width": 1.3784860557768925}, {"from": "pipp", "to": "dene", "width": 1.151394422310757}, {"from": "arag", "to": "lego", "width": 3.00597609561753}, {"from": "arag", "to": "gimli", "width": 2.589641434262948}, {"from": "arag", "to": "boro", "width": 2.2111553784860556}, {"from": "arag", "to": "elro", "width": 2.0597609561752988}, {"from": "arag", "to": "gond", "width": 1.794820717131474}, {"from": "arag", "to": "eome", "width": 1.7191235059760956}, {"from": "arag", "to": "roha", "width": 1.6812749003984064}, {"from": "arag", "to": "orcs", "width": 1.3784860557768925}, {"from": "arag", "to": "comp", "width": 1.3406374501992033}, {"from": "arag", "to": "tiri", "width": 1.1892430278884463}, {"from": "arag", "to": "mord", "width": 1.1135458167330676}, {"from": "arag", "to": "saur", "width": 1.0378486055776892}, {"from": "arag", "to": "theod", "width": 1.0378486055776892}, {"from": "arag", "to": "fara", "width": 1.0}, {"from": "bilb", "to": "shir", "width": 1.6812749003984064}, {"from": "ring", "to": "saur", "width": 2.0597609561752988}, {"from": "gimli", "to": "lego", "width": 3.952191235059761}, {"from": "shir", "to": "hobb", "width": 1.3406374501992033}, {"from": "shir", "to": "bree", "width": 1.2270916334661355}, {"from": "saru", "to": "isen", "width": 2.2111553784860556}, {"from": "saru", "to": "orth", "width": 1.151394422310757}, {"from": "saru", "to": "roha", "width": 1.0378486055776892}, {"from": "saur", "to": "mord", "width": 1.908366533864542}, {"from": "saur", "to": "gond", "width": 1.2649402390438247}, {"from": "theod", "to": "eome", "width": 1.1892430278884463}, {"from": "fara", "to": "gond", "width": 1.2270916334661355}, {"from": "gond", "to": "roha", "width": 1.794820717131474}, {"from": "gond", "to": "andu", "width": 1.3406374501992033}, {"from": "ents", "to": "treeb", "width": 1.4163346613545817}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+                    network.on("click", neighbourhoodHighlight);
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
